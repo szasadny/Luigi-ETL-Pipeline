@@ -6,11 +6,11 @@ This pipeline extracts the relevant data from the source library database and th
 Run luigiServer.py to run the monitoring server.
 
 
-Run main.py to run the server calling the script. You can then externally trigger the pipeline by accessing the API at {HOST}/trigger_etl.
+Run main.py to run the script. You can then externally trigger a trigger for the pipeline by accessing the API at {HOST}/trigger_etl.
 
 
 ### Requirement design pattern
-Luigi works by the requirement design pattern where a task won't run unless it's dependancies are completed. This is communicated by writing an output file at the end of the previous task. Below is the dependency pattern for this particular pipeline. By splitting the load into multiple tasks, we are able to have multiple workers work parallel at the same time.
+Luigi works by the requirement design pattern where a task won't run unless it's dependencies are completed. This is communicated by writing an output file at the end of the previous task. Below is the dependency pattern for this particular pipeline. By splitting the load into multiple tasks, we are able to have multiple workers work parallel at the same time.
 
 ![ETL drawio](https://github.com/szasadny/Luigi-ETL-Pipeline/assets/23632768/a253ed42-bb7b-43d1-a508-c29f75c89d4a)
 
