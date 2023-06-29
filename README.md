@@ -12,14 +12,14 @@ Run main.py to run the script. You can then externally trigger a trigger for the
 ### Requirement design pattern
 Luigi works by the requirement design pattern where a task won't run unless it's dependencies are completed. This is communicated by writing an output file at the end of the previous task. Below is the dependency pattern for this particular pipeline. By splitting the load into multiple tasks, we are able to have multiple workers work parallel at the same time.
 
-![ETL drawio](https://github.com/szasadny/Luigi-ETL-Pipeline/assets/23632768/a253ed42-bb7b-43d1-a508-c29f75c89d4a)
+![ETL drawio (1)](https://github.com/szasadny/Luigi-ETL-Pipeline/assets/23632768/6ee9bb2f-6fb4-4de1-a2c9-90cf0455a50b)
 
 
-### Source database
+## Source database
 
 ![ERD Bibliotheek Database drawio](https://github.com/szasadny/Luigi-ETL-Pipeline/assets/23632768/f3551e9f-262a-4ba8-b281-984de666bd86)
 
 
-### Target database 
+## Target database 
 
 ![ERD Recommender applicatie drawio](https://github.com/szasadny/Luigi-ETL-Pipeline/assets/23632768/15f045bf-391c-48c5-a152-9fe9f976ba59)
