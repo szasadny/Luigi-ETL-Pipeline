@@ -1,7 +1,7 @@
 import luigi
 import os
 from flask import Flask
-from loadTask import LoadKeywordDim, LoadBookKeywordFact, LoadLoanFact
+from loadTask import LoadReviewFact, LoadBookKeywordFact, LoadLoanFact
 from luigiServer import scheduler
 
 # API server to make/get commands
@@ -16,7 +16,7 @@ class MainTask(luigi.Task):
     version = luigi.IntParameter(default=1)
 
     def requires(self):
-        return [LoadKeywordDim(version=self.version), LoadBookKeywordFact(version=self.version), LoadLoanFact(version=self.version)]
+        return [LoadReviewFact(version=self.version), LoadBookKeywordFact(version=self.version), LoadLoanFact(version=self.version)]
 
     def run(self):
         global current_version, previous_version  # Access the global version control variables

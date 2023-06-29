@@ -78,10 +78,8 @@ class LoadUserDim(luigi.Task):
 
         # Combine all the to be inserted values into one SQL statement
         if values:
-            placeholders = ', '.join(['(%s)'] * len(values))
-            sql = f"INSERT INTO User_DIM (user_id) VALUES {placeholders}"
-            print(sql)
-            cursor.execute(sql, values)
+            sql = f"INSERT INTO User_DIM (user_id) VALUES (%s)"
+            cursor.executemany(sql, [(value,) for value in values])
 
     def output(self):
         filename = f'user_load_complete_v{self.version}.txt'
@@ -125,9 +123,8 @@ class LoadKeywordDim(luigi.Task):
 
         # Combine all the to be inserted values into one SQL statement
         if values:
-            placeholders = ', '.join(['(%s)'] * len(values))
-            sql = f"INSERT INTO Keyword_DIM (keyword_id) VALUES {placeholders}"
-            cursor.execute(sql, values)
+            sql = f"INSERT INTO Keyword_DIM (keyword_id) VALUES (%s)"
+            cursor.executemany(sql, [(value,) for value in values])
 
     def output(self):
         filename = f'keyword_load_complete_v{self.version}.txt'
@@ -184,15 +181,13 @@ class LoadBookDim(luigi.Task):
 
         # Insert new books
         if insert_values:
-            placeholders = ', '.join(['(%s, %s, %s)'] * len(insert_values))
-            insert_sql = f"INSERT INTO Book_DIM (book_id, writer, avg_score) VALUES {placeholders}"
-            insert_values_flat = [value for row in insert_values for value in row]
-            cursor.execute(insert_sql, insert_values_flat)
+            insert_sql = f"INSERT INTO Book_DIM (book_id, writer, avg_score) VALUES (%s, %s, %s)"
+            cursor.executemany(insert_sql, insert_values)
 
         # Update writer of edited books new value
-        for writer, book_id in update_values:
-            cursor.execute("UPDATE Book_DIM SET writer = %s WHERE book_id = %s",
-                        (writer, book_id))
+        if update_values:
+            update_sql = "UPDATE Book_DIM SET writer = %s WHERE book_id = %s"
+            cursor.executemany(update_sql, update_values)
 
     def output(self):
         filename = f'book_load_complete_v{self.version}.txt'
@@ -238,19 +233,18 @@ class LoadBookKeywordFact(luigi.Task):
                 keyword_id = row[1]
                 insert_values.append((book_id, keyword_id))
 
-        # MySQL has a statement limit of 8,192 characters. Set the maximum values to 7000 to keep some play.
-        max_values_per_insert = 7000
+        # Limit batch size for this dataset
+        max_values_per_insert = 5000
 
         # Split the insert_values into chunks of maximum size
         value_chunks = [insert_values[i:i+max_values_per_insert] for i in range(0, len(insert_values), max_values_per_insert)]
 
         # Execute the INSERT statements for each value chunk
         for values in value_chunks:
-            placeholders = ', '.join(['((SELECT book_key FROM Book_DIM WHERE book_id = %s), '
-                                    '(SELECT keyword_key FROM Keyword_DIM WHERE keyword_id = %s))'] * len(values))
-            insert_sql = f"INSERT INTO Book_Keyword_FACT (book_key, keyword_key) VALUES {placeholders}"
-            insert_values_flat = [value for row in values for value in row]
-            cursor.execute(insert_sql, insert_values_flat)
+            insert_sql = f"""INSERT INTO Book_Keyword_FACT (book_key, keyword_key) VALUES 
+                                    ((SELECT book_key FROM Book_DIM WHERE book_id = %s),
+                                    (SELECT keyword_key FROM Keyword_DIM WHERE keyword_id = %s))"""
+            cursor.executemany(insert_sql, values)
 
     def output(self):
         filename = f'bookKeywordFactLoaded_v{self.version}.txt'
@@ -290,19 +284,19 @@ class LoadReviewFact(luigi.Task):
 
         for row in data:
             if tuple(row) not in previous_entries:
-                user_id = row[0]
-                book_id = row[1]
-                rating = row[2]
-                insert_values.append((user_id, book_id, rating))
+                review_id = row[0]
+                user_id = row[1]
+                book_id = row[2]
+                rating = row[3]
+                insert_values.append((review_id, rating, book_id, user_id))
 
         # Combine all the to be inserted values into one SQL statement
         if insert_values:
-            placeholders = ', '.join(['((SELECT user_key FROM User_DIM WHERE user_id = %s), '
-                                    '(SELECT book_key FROM Book_DIM WHERE book_id = %s), '
-                                    '%s)'] * len(insert_values))
-            insert_sql = f"INSERT INTO Review_FACT (user_key, book_key, rating) VALUES {placeholders}"
-            insert_values_flat = [value for row in insert_values for value in row]
-            cursor.execute(insert_sql, insert_values_flat)
+            insert_sql = f"""INSERT INTO review_fact (review_id, rating, book_key, user_key)
+                VALUES (%s, %s,
+                (SELECT book_key FROM Book_DIM WHERE book_id = %s),
+                (SELECT user_key FROM User_DIM WHERE user_id = %s))"""
+            cursor.executemany(insert_sql, insert_values)
 
     def output(self):
         filename = f'reviewFactLoaded_v{self.version}.txt'
@@ -361,12 +355,10 @@ class LoadLoanFact(luigi.Task):
 
         # Insert new loans
         if insert_values:
-            placeholders = ', '.join(['(%s, %s, %s, '
-                                    '(SELECT user_key FROM User_DIM WHERE user_id = %s), '
-                                    '(SELECT book_key FROM Book_DIM WHERE book_id = %s))'] * len(insert_values))
-            insert_sql = f"INSERT INTO Loan_FACT (loan_id, loan_date, return_date, user_key, book_key) VALUES {placeholders}"
-            insert_values_flat = [value for row in insert_values for value in row]
-            cursor.execute(insert_sql, insert_values_flat)
+            insert_sql = f"""INSERT INTO Loan_FACT (loan_id, loan_date, return_date, user_key, book_key) VALUES (%s, %s, %s, 
+                                    (SELECT user_key FROM User_DIM WHERE user_id = %s), 
+                                    (SELECT book_key FROM Book_DIM WHERE book_id = %s)) """
+            cursor.executemany(insert_sql, insert_values)
 
         # Update edited loans
         if update_values:
