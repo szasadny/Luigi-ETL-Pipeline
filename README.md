@@ -1,4 +1,4 @@
-# Luigi ETL Pipeline for a library recommender system
+# Luigi ETL pipeline for a library recommender system
 
 This pipeline extracts the relevant data from the source library database and then transforms and loads it into the target database used by a recommender system. Using version control it keeps track of which data is already loaded for increased efficiency. It's also able to alter the relevant data that was changed in the source database by comparing it to the previous version.
 
